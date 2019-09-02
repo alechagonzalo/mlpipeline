@@ -10,20 +10,19 @@ import os
 def takeSecond(elem):
     return elem[1]
 
-def comparator(featureToCompare):
+def comparator(featureToCompare,color):
 	files=[]
 	ranking=[]
 	# obtain names of reference features
 
 	#features vgg16
-	pathFeatures= "./refRobot/"+featureToCompare[1]+"/"
-
+	pathFeatures= "./refRobot/"+featureToCompare[1]+"/"+color+"/"
 	#features resnet50
 	#pathFeatures= "./imgRef/"+featureToCompare[1]+"/"
 	for r, d, f in os.walk(pathFeatures):
 		for file in f:
 			if '.npy' in file:
-				files.append(os.path.join(r, file))
+				files.append(os.path.join(r, file))		
 
 	maximo=[0,0]
 	#print(files)

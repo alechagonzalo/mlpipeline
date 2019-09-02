@@ -18,6 +18,9 @@ from vgg import obtainFeatures
 from comparador import comparator
 import os
 
+import cv2
+from skimage import io
+
 
 # define 81 classes that the coco model knowns about
 class_names = ['BG', 'box', 'bottle']
@@ -80,8 +83,8 @@ def deteccion(modelo,image):
      img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
 
      imagenn = Image.fromarray(imagenConNegro.astype('uint8'), 'RGB')
-     plt.imshow(imagenn)
-     plt.savefig('foo.png')
+     #plt.imshow(imagenn)
+     #plt.savefig('foo.png')
      #plt.show()
 
      for i in range(N-1, -1, -1):
@@ -133,7 +136,22 @@ def knn(pathsave):
           # np.save("./ReferenceFeatures/"+f[37:]+".npy", obtainFeatures(f))
           f2= f.replace(path,"")
           feature= [obtainFeatures(f),f2[:f2.find("-")]]
-          features.append([f2,feature]) 
+
+          img = io.imread(f)
+          average = img.mean(axis=0).mean(axis=0)
+          average=list(average)
+          if len(average)==4:
+               average=average[:-1]
+          maximo=average.index(max(average))
+
+          if maximo == 0:
+               color="r"
+          elif maximo == 1:
+               color="g"
+          elif maximo==2:
+               color="b"      
+
+          features.append([f2,feature,color]) 
           printProgressBar(index + 1, len(files), prefix = 'Feature '+ str(index+ 1)+"/"+str(len(files)), suffix = 'Completo', length = 50)
 
      print("\nClasificando productos")
@@ -143,7 +161,7 @@ def knn(pathsave):
    
      for index,featureToCompare in enumerate(features):
           
-          detecciones.append([featureToCompare[0],comparator(featureToCompare[1])])
+          detecciones.append([featureToCompare[0],comparator(featureToCompare[1],featureToCompare[2]),featureToCompare[2]])
           printProgressBar(index + 1, len(features), prefix = 'Producto '+ str(index + 1)+"/"+str(len(features)), suffix = 'Completo', length = 50)
 
 
@@ -153,7 +171,7 @@ def knn(pathsave):
      for index,deteccion in enumerate(detecciones):
      # eleccion de K vecinos más cercanos
           #print(str(index+1)+" "+classes[detecciones[index][1]]+" con "+str(round(detecciones[index][0]*100,2))+"%")
-          print("\nPara imagen "+deteccion[0]+":")
+          print("\nPara imagen "+deteccion[0]+": "+deteccion[2])
           print('\n'.join('{}: {}'.format(*k) for k in enumerate(deteccion[1][:k])))
           rank = deteccion[1][:k]
           knns=[]
