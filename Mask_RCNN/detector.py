@@ -66,7 +66,7 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
 
 
 def deteccion(modelo,image):
-
+     start2=time.time()
      umbralDetection = 0.75
      # load photograph
      img = load_img(image)
@@ -78,7 +78,8 @@ def deteccion(modelo,image):
      # get dictionary for first prediction
      r = results[0]
      N = r['rois'].shape[0]
-
+     end2=time.time()     
+     print(end2-start2)
 
      #imagenConNegro = display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
      #plt.imshow(imagenn)
@@ -108,16 +109,18 @@ def deteccion(modelo,image):
      else:
           print ("Successfully created the directory %s \n" % pathsave)
 
-     #imagenn = Image.fromarray(imagenConNegro.astype('uint8'), 'RGB')
-
      
      for i in range (N):
+          
           ImgParam=np.copy(img)
           imagen=blackbackground(ImgParam,r['rois'][i],r['masks'][:,:,i])
           file_name = pathsave+"/"+class_names[r['class_ids'][i]]+"-score:"+  str(r['scores'][i]) +"-{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
           imagenn = Image.fromarray(imagen.astype('uint8'), 'RGB')
           imagenn.crop((r['rois'][i][1], r['rois'][i][0],r['rois'][i][3],r['rois'][i][2])).save(file_name)
           printProgressBar(i + 1, N, prefix = 'Progreso:', suffix = 'Completo', length = 50)
+          
+     
+
      return pathsave
 
 def knn(pathsave):
