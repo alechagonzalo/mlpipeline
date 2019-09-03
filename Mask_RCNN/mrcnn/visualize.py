@@ -26,6 +26,7 @@ ROOT_DIR = os.path.abspath("../")
 # Import Mask RCNN
 sys.path.append(ROOT_DIR)  # To find local version of the library
 from mrcnn import utils
+from PIL import Image
 
 
 ############################################################
@@ -106,6 +107,8 @@ def display_instances(image, boxes, masks, class_ids, class_names,scores=None,ti
 
     #masked_image = image.astype(np.uint32).copy()
     imgModified= image
+    canvas = np.zeros((image.shape[0],image.shape[1]), dtype=int)
+
 
     for i in range(N):
         box= boxes[i]
@@ -117,10 +120,31 @@ def display_instances(image, boxes, masks, class_ids, class_names,scores=None,ti
  
         for n in range(x1,x2):
             for j in range(y1,y2):
-                if masks[:,:,i][j][n] == False:
-                    imgModified[j][n]=[0,0,0]
+                if masks[:,:,i][j][n] == True:
+                    #imgModified[j][n]=[0,0,0]
+                    canvas[j][n] = 1
+    
+    for n in range(0,canvas.shape[1]):
+        for j in range(0,canvas.shape[0]):    
+            if canvas[j][n] != 1:
+                imgModified[j][n]=[0,0,0]
+
+
 
     return imgModified.astype(np.uint32).copy()
+
+def blackbackground(imagen,r, mask):
+    x1=r[1]
+    y1=r[0]
+    x2=r[3]
+    y2=r[2]
+
+    for n in range(x1,x2):
+        for j in range(y1,y2):
+            if mask[j][n] != True:
+                imagen[j][n] = [0,0,0]
+    return imagen    
+
 
     # for i in range(N):
     #     color = colors[i]
@@ -252,8 +276,8 @@ def display_instances2(image, boxes, masks, class_ids, class_names,scores,title=
             p = Polygon(verts, facecolor="none", edgecolor=color)
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
-    if auto_show:
-        plt.show()
+    plt.imshow(masked_image)
+    plt.savefig('foo.png')
 
 
 def display_differences(image,

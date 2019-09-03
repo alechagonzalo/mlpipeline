@@ -1,7 +1,7 @@
 # example of inference with a pre-trained coco model
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
-from mrcnn.visualize import display_instances
+from mrcnn.visualize import blackbackground
 from mrcnn.config import Config
 from mrcnn.model import MaskRCNN
 import argparse
@@ -17,10 +17,11 @@ import matplotlib.image as mpimg
 from vgg import obtainFeatures
 from comparador import comparator
 import os
-
+import sys
 import cv2
 from skimage import io
 
+import time
 
 # define 81 classes that the coco model knowns about
 class_names = ['BG', 'box', 'bottle']
@@ -67,9 +68,9 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
 def deteccion(modelo,image):
 
      umbralDetection = 0.75
-
      # load photograph
      img = load_img(image)
+     img = img.resize((int(img.size[0]*0.5),int(img.size[1]*0.5)),Image.ANTIALIAS)
      img = img_to_array(img)
      # make prediction
      print("Realizando detecciones....")
@@ -79,10 +80,7 @@ def deteccion(modelo,image):
      N = r['rois'].shape[0]
 
 
-     imagenConNegro = display_instances(
-     img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
-
-     imagenn = Image.fromarray(imagenConNegro.astype('uint8'), 'RGB')
+     #imagenConNegro = display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
      #plt.imshow(imagenn)
      #plt.savefig('foo.png')
      #plt.show()
@@ -110,12 +108,16 @@ def deteccion(modelo,image):
      else:
           print ("Successfully created the directory %s \n" % pathsave)
 
+     #imagenn = Image.fromarray(imagenConNegro.astype('uint8'), 'RGB')
+
+     
      for i in range (N):
+          ImgParam=np.copy(img)
+          imagen=blackbackground(ImgParam,r['rois'][i],r['masks'][:,:,i])
           file_name = pathsave+"/"+class_names[r['class_ids'][i]]+"-score:"+  str(r['scores'][i]) +"-{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
+          imagenn = Image.fromarray(imagen.astype('uint8'), 'RGB')
           imagenn.crop((r['rois'][i][1], r['rois'][i][0],r['rois'][i][3],r['rois'][i][2])).save(file_name)
           printProgressBar(i + 1, N, prefix = 'Progreso:', suffix = 'Completo', length = 50)
-
-
      return pathsave
 
 def knn(pathsave):
@@ -160,7 +162,7 @@ def knn(pathsave):
      detecciones=[]
    
      for index,featureToCompare in enumerate(features):
-          
+
           detecciones.append([featureToCompare[0],comparator(featureToCompare[1],featureToCompare[2]),featureToCompare[2]])
           printProgressBar(index + 1, len(features), prefix = 'Producto '+ str(index + 1)+"/"+str(len(features)), suffix = 'Completo', length = 50)
 
@@ -171,18 +173,20 @@ def knn(pathsave):
      for index,deteccion in enumerate(detecciones):
      # eleccion de K vecinos más cercanos
           #print(str(index+1)+" "+classes[detecciones[index][1]]+" con "+str(round(detecciones[index][0]*100,2))+"%")
-          print("\nPara imagen "+deteccion[0]+": "+deteccion[2])
-          print('\n'.join('{}: {}'.format(*k) for k in enumerate(deteccion[1][:k])))
-          rank = deteccion[1][:k]
-          knns=[]
+          print("\nPara imagen "+deteccion[0]+":")
+          if deteccion[1] != False:
+               print('\n'.join('{}: {}'.format(*k) for k in enumerate(deteccion[1][:k])))
+               rank = deteccion[1][:k]
+               knns=[]
 
-          for i in range(len(rank)):
-               knns.append(rank[i][0])
-          
-          print(knns)
-          value = max(knns,key=knns.count)
-          print("Con k="+str(k)+" tenemos que el recorte es: "+classes[int(value)])
-          productos.append(int(value))
+               for i in range(len(rank)):
+                    knns.append(rank[i][0])
+               
+               value = max(knns,key=knns.count)
+               print("Con k="+str(k)+" tenemos que el recorte es: "+classes[int(value)])
+               productos.append(int(value))
+          else:
+               print("No existen features para el color dominante en el recorte")
      return productos
 
 
@@ -246,9 +250,6 @@ def test(rcnn,path):
      print("Recall: "+str(recall))
      print("F-Measure: "+str(fmeasure))
 
-     
-
-
      return
 
 
@@ -276,12 +277,13 @@ if __name__ == '__main__':
           "Se requiere imagen de entrada"
 
      
-
+     
      # define the model
      rcnn = MaskRCNN(mode='inference', model_dir='./', config=TestConfig())
      # load coco model weights
      rcnn.load_weights('trainingW/mask_rcnn_object_0050.h5', by_name=True)
-
+     
+     start = time.time()
      if args.command == "detector":
           image = args.image
           recortespath = deteccion(rcnn,image)
@@ -290,3 +292,6 @@ if __name__ == '__main__':
      elif args.command == "test":
           folder = args.folder
           test(rcnn,folder)
+
+     end = time.time()
+     print("Tiempo de ejecución: "+ str(round(end-start,2))+" seg.")

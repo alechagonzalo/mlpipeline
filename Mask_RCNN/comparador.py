@@ -24,7 +24,13 @@ def comparator(featureToCompare,color):
 			if '.npy' in file:
 				files.append(os.path.join(r, file))		
 
+	
+
+	if len(files)==0:
+		return False
+		
 	maximo=[0,0]
+
 	#print(files)
 
 	# obtain simility value between reference features
