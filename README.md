@@ -25,6 +25,7 @@ Luego de 30 epochs, el detector de formas adquirió la capacidad de reconocer pr
 
 ![Detección de productos con Mask-RCNN luego de 30 épocas](https://i.ibb.co/x6rpn8t/Screenshot-from-2019-08-16-00-46-38.png)
 A partir de este momento, somos capaces de reconocer objetos con estas dos formas en la imagen de entrada, y de extraer las regiones de los mismos, para su posterior procesamiento.
+
 Por ejemplo, en la siguiente imagen de entrada tenemos todos los productos a reconocer por nuestro sistema: Botella de Pepsi Zero, Botella de Pepsi Regular, Caja de Raspberri Pi, Caja de Freescale, Botella de Mr. Musculo y Caja de UHU.
 
 ![](https://i.ibb.co/Dt0wZTS/pepsi-C003751.jpg)
@@ -36,7 +37,9 @@ Por cada producto se generará una imagen en particular, para una mejor comprens
 ## Generación de imagenes de referencia
 
 Para proceder en la creación de nuestro pipeline, debemos generar las imágenes de referencia que representen a cada producto a identificar, las cuales se utilizaran para ser comparadas con las regiones obtenidas en el detector. 
+
 Debemos tener en cuenta que estas imágenes no pueden tener una calidad totalmente diferente a las que ingresan al detector, ya que necesitamos que exista la mayor similitud posible, para que el clasificador funcione correctamente.
+
 Por cada producto se obtienen aproximadamente 10 imágenes de referencia, eliminando el fondo de la misma como se ve a continuación:
 
 ![](https://i.ibb.co/C25yf4G/New-Project-2.jpg)
@@ -45,8 +48,10 @@ Por cada producto se obtienen aproximadamente 10 imágenes de referencia, elimin
 
 La confusión de una botella de Pepsi Común con Pepsi Zero fue el error más frecuente. Este error eracomprensible, ya que ambos tienen la misma forma, y mismo color (en gran parte de su superficie); el único cambio notable, es la diferencia de color de su etiqueta y la de su tapa.
 Para solucionar esto, y evitar cualquiera falsa detección de la misma naturaleza, se planteo una solución basada en la composición de colores RGB de los objetos detectados.
+
 Lo que se realizo, fue separar las imágenes de referencia teniendo en cuenta el color RGB predominante en cada una. Es decir que la base de datos de referencia quedo divida en seis grupos: una primera división, en cajas y botellas; y una segunda, en tres subgrupos de acuerdo al color rojo, verde
 o azul que predomina.
+
 De esta manera, a la hora de realizar las detecciones, se obtiene el color RGB predominante de cada uno de los elementos obtenidos de la red MASK R-CNNN. Teniendo en cuenta el tipo de objeto (caja o botella) y del color RGB, se realiza la comparación de la feature obtenida, con el grupo de referencia correspondiente.
 Para la obtención del color RGB dominante, se utilizo la librería de Python Scikit-Image. 
 
@@ -169,7 +174,6 @@ A continuación se muestran pruebas realizadas con distintas imágenes, y los re
 
 ### Prueba A
 
-![](https://i.ibb.co/2sGTpdB/New-Project-23.png)
 ![](https://i.ibb.co/hLG26XM/3751.png)
 ![](https://i.ibb.co/Dtpk04n/3751mask.png)
 ![](https://i.ibb.co/16F2JXg/3751cons.png)
@@ -189,12 +193,12 @@ A continuación se muestran pruebas realizadas con distintas imágenes, y los re
 ### Prueba D
 
 ![](https://i.ibb.co/3s55YNv/4624.png)
-![](https://i.ibb.co/JsFP536/4624cons.png)
 ![](https://i.ibb.co/WfddV2n/4624mask.png)
+![](https://i.ibb.co/JsFP536/4624cons.png)
+
 
 ### Prueba E
 
 ![](https://i.ibb.co/RgpHvK7/5215.png)
-![](https://i.ibb.co/LSDVrTc/5215cons.png)
 ![](https://i.ibb.co/GdM53BC/5215mask.png)
-
+![](https://i.ibb.co/LSDVrTc/5215cons.png)
