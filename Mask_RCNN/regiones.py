@@ -34,7 +34,7 @@ image = args.image
 rcnn = MaskRCNN(mode='inference', model_dir='./', config=TestConfig())
 # load coco model weights
 
-rcnn.load_weights('trainingW/mask_rcnn_object_0050.h5', by_name=True)
+rcnn.load_weights('trainingW/mask_rcnn_object_0060.h5', by_name=True)
 #rcnn.load_weights('trainingW/mask_rcnn_coco.h5', by_name=True)
 # load photograph
 img = load_img(image)

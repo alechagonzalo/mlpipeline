@@ -10,21 +10,26 @@ import os
 def takeSecond(elem):
     return elem[1]
 
-def comparator(featureToCompare,color):
+def comparator(featureToCompare,color,aspect):
 	files=[]
 	ranking=[]
 	# obtain names of reference features
 
-	#features vgg16
-	pathFeatures= "./refRobot/"+featureToCompare[1]+"/"+color+"/"
-	#features resnet50
-	#pathFeatures= "./imgRef/"+featureToCompare[1]+"/"
-	for r, d, f in os.walk(pathFeatures):
-		for file in f:
-			if '.npy' in file:
-				files.append(os.path.join(r, file))		
 
-	
+	# si existe filtro de color, comparar con todas las features
+	if color !=False:
+		pathFeatures= "./refRobot/"+featureToCompare[1]+"/"+str(color)+"/"
+		for r, d, f in os.walk(pathFeatures):
+			for file in f:
+				if '.npy' in file:
+					files.append(os.path.join(r, file))		
+
+	else:
+		pathFeatures= "./refRobot/"+featureToCompare[1]+"2/"
+		for r, d, f in os.walk(pathFeatures):
+			for file in f:
+				if '.npy' in file:
+					files.append(os.path.join(r, file))	
 
 	if len(files)==0:
 		return False
@@ -36,12 +41,10 @@ def comparator(featureToCompare,color):
 	# obtain simility value between reference features
 	for f in files:
 		reference= np.load(f)
-
-		# suma guarda valor temporal. Maximo guarda valor maximo y clase
+		# obtengo la relacion de aspecto de la feature
+		rel=f[f.rfind("-")+1:f.rfind(".")]
 		
 		cos=0
-		#for i in range(7):
-			#suma += np.linalg.norm(cosine_similarity(featureToCompare[0][i],reference[0][i]))
 
 		a=featureToCompare[0][0].flatten('F')
 		b= reference[0].flatten('F')
@@ -51,12 +54,10 @@ def comparator(featureToCompare,color):
 		cos = dot / (norma * normb)
 	
 
-		# obtengo la maxima similitud
-		#if(cos>maximo[0]):
-		#	maximo[0] = cos
-		#	maximo[1] = int(f[len(pathFeatures):][:1])
-		
-		
-		ranking.append([f[f.rfind("/")+1:f.find("-")],cos])
+		# guardo el nombre de la feature, su similitud y su relacion de aspecto
+		ranking.append([f[f.rfind("/")+1:f.find("-")],cos,float(rel)])
+
+	#ordeno el ranking de acuerdo a la similitud	
 	ranking.sort(key=takeSecond,reverse=True)
+
 	return ranking

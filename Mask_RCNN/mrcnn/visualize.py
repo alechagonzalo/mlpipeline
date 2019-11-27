@@ -128,7 +128,7 @@ def display_instances(image, boxes, masks, class_ids, class_names,scores=None,ti
     for n in range(0,canvas.shape[1]):
         for j in range(0,canvas.shape[0]):    
             if canvas[j][n] != 1:
-                imgModified[j][n]=[0,0,0]
+                imgModified[j][n]=[2,0,0]
 
 
 
@@ -140,10 +140,11 @@ def blackbackground(imagen,r, mask):
     x2=r[3]
     y2=r[2]
 
+
     for n in range(x1,x2):
         for j in range(y1,y2):
             if mask[j][n] != True:
-                imagen[j][n] = [0,0,0]
+                imagen[j][n] = [255,255,255]
     return imagen    
 
 
@@ -249,7 +250,7 @@ def display_instances2(image, boxes, masks, class_ids, class_names,scores,title=
             p = patches.Rectangle((x1, y1), x2 - x1, y2 - y1, linewidth=2,
                                 alpha=0.7, linestyle="dashed",
                                 edgecolor=color, facecolor='none')
-            ax.add_patch(p)
+            #ax.add_patch(p)
 
         if not captions:
             class_id = class_ids[i]
@@ -278,7 +279,7 @@ def display_instances2(image, boxes, masks, class_ids, class_names,scores,title=
             ax.add_patch(p)
     ax.imshow(masked_image.astype(np.uint8))
     plt.imshow(masked_image)
-    plt.savefig('foo.png')
+    plt.savefig('reconocimiento.png')
 
 
 def display_differences(image,

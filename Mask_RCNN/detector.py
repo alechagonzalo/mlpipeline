@@ -1,13 +1,15 @@
 # example of inference with a pre-trained coco model
 from keras.preprocessing.image import load_img
 from keras.preprocessing.image import img_to_array
-from mrcnn.visualize import blackbackground
+from mrcnn.visualize import blackbackground,display_instances2
 from mrcnn.config import Config
 from mrcnn.model import MaskRCNN
 import argparse
-from PIL import Image
+from PIL import Image,ImageEnhance
 import datetime
 
+from PIL import ImageFont
+from PIL import ImageDraw 
 import skimage.draw
 import glob
 import numpy as np
@@ -27,17 +29,22 @@ import time
 class_names = ['BG', 'box', 'bottle']
 
 classes = ["Raspberry", "Pepsi Zero", "FreeScale", "UHU",
-    "Mr Musculo", "Blem Electrica", "Pepsi Comun"]
+    "Mr Musculo", "NO ESPECIFICO", "Pepsi Comun"]
 
 # define the test configuration
 
+
+global filtrocolor
 
 class TestConfig(Config):
      NAME = "test"
      GPU_COUNT = 1
      IMAGES_PER_GPU = 1
      NUM_CLASSES = 1 + 2
-
+     #IMAGE_MAX_DIM = 640
+     #IMAGE_MIN_DIM = 256
+     DETECTION_MIN_CONFIDENCE = 0.75
+     RPN_ANCHOR_RATIOS = [0.2, 0.5, 1]
 
 
 def takeSecond(elem):
@@ -65,9 +72,27 @@ def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=
         print()
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def deteccion(modelo,image):
-     start2=time.time()
-     umbralDetection = 0.75
+
+     #im = Image.open(image)
+     #enhancer = ImageEnhance.Sharpness(im)
+     #enhanced_im = enhancer.enhance(20.0)
+     #image2= image[:image.rfind(".")]+"2"+image[image.rfind("."):]
+     #enhanced_im.save(image2)
+
+
+
      # load photograph
      img = load_img(image)
      img = img.resize((int(img.size[0]*0.5),int(img.size[1]*0.5)),Image.ANTIALIAS)
@@ -75,24 +100,14 @@ def deteccion(modelo,image):
      # make prediction
      print("Realizando detecciones....")
      results = modelo.detect([img], verbose=0)
+     
      # get dictionary for first prediction
      r = results[0]
+     display_instances2(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
      N = r['rois'].shape[0]
-     end2=time.time()     
-     print(end2-start2)
 
-     #imagenConNegro = display_instances(img, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
-     #plt.imshow(imagenn)
-     #plt.savefig('foo.png')
-     #plt.show()
-
-     for i in range(N-1, -1, -1):
-          if float(r['scores'][i]) < umbralDetection:
-               print("elimino deteccion con "+str(float(r['scores'][i])))
-               r['scores']= np.delete(r['scores'],i)
-               r['class_ids']=np.delete(r['class_ids'],i)
-               r['rois']=np.delete(r['rois'],i,axis=0)
-               r['masks']=np.delete(r['masks'],i,axis=0)
+     #guardar imagen reconocida
+     #display_instances2(img, r['rois'], r['masks'], r['class_ids'], class_names,r['scores'])
 
      N=r['scores'].shape[0]
 
@@ -108,13 +123,23 @@ def deteccion(modelo,image):
           print ("Creation of the directory %s failed" % pathsave)
      else:
           print ("Successfully created the directory %s \n" % pathsave)
+     
+     ratios=[]
 
+     
      
      for i in range (N):
           
           ImgParam=np.copy(img)
           imagen=blackbackground(ImgParam,r['rois'][i],r['masks'][:,:,i])
-          file_name = pathsave+"/"+class_names[r['class_ids'][i]]+"-score:"+  str(r['scores'][i]) +"-{:%Y%m%dT%H%M%S}.png".format(datetime.datetime.now())
+          x1=r['rois'][i][1]
+          y1=r['rois'][i][0]
+          x2=r['rois'][i][3]
+          y2=r['rois'][i][2]
+          width=x2-x1
+          height=y2-y1
+          ratio= round(float(width/height),3)
+          file_name = pathsave+"/"+class_names[r['class_ids'][i]]+"-score:"+str(r['scores'][i]) +"-{:%Y%m%dT%H%M%S}-".format(datetime.datetime.now())+str(ratio) +".png"
           imagenn = Image.fromarray(imagen.astype('uint8'), 'RGB')
           imagenn.crop((r['rois'][i][1], r['rois'][i][0],r['rois'][i][3],r['rois'][i][2])).save(file_name)
           printProgressBar(i + 1, N, prefix = 'Progreso:', suffix = 'Completo', length = 50)
@@ -139,24 +164,32 @@ def knn(pathsave):
      printProgressBar(0, len(files), prefix = 'Progreso:', suffix = 'Completo', length = 50)
      for index,f in enumerate(files):
           # np.save("./ReferenceFeatures/"+f[37:]+".npy", obtainFeatures(f))
+          rel=f[f.rfind("-")+1:f.rfind(".")]
           f2= f.replace(path,"")
           feature= [obtainFeatures(f),f2[:f2.find("-")]]
 
-          img = io.imread(f)
-          average = img.mean(axis=0).mean(axis=0)
-          average=list(average)
-          if len(average)==4:
-               average=average[:-1]
-          maximo=average.index(max(average))
+          print(filtrocolor)
 
-          if maximo == 0:
-               color="r"
-          elif maximo == 1:
-               color="g"
-          elif maximo==2:
-               color="b"      
+          if filtrocolor==True:
+               img = io.imread(f)
+               average = img.mean(axis=0).mean(axis=0)
+               average=list(average)
+               if len(average)==4:
+                    average=average[:-1]
+               maximo=average.index(max(average))
 
-          features.append([f2,feature,color]) 
+               if maximo == 0:
+                    color="r"
+               elif maximo == 1:
+                    color="g"
+               elif maximo==2:
+                    color="b"    
+          
+               features.append([f2,feature,color,float(rel)]) 
+          else:
+               features.append([f2,feature,False,float(rel)]) 
+
+
           printProgressBar(index + 1, len(files), prefix = 'Feature '+ str(index+ 1)+"/"+str(len(files)), suffix = 'Completo', length = 50)
 
      print("\nClasificando productos")
@@ -166,17 +199,20 @@ def knn(pathsave):
    
      for index,featureToCompare in enumerate(features):
 
-          detecciones.append([featureToCompare[0],comparator(featureToCompare[1],featureToCompare[2]),featureToCompare[2]])
+          detecciones.append([featureToCompare[0],comparator(featureToCompare[1],featureToCompare[2],featureToCompare[3]),featureToCompare[2]])
           printProgressBar(index + 1, len(features), prefix = 'Producto '+ str(index + 1)+"/"+str(len(features)), suffix = 'Completo', length = 50)
 
-
-     print("\nLa imagen ingresada contiene:")
      k=3
+
      productos=[]
      for index,deteccion in enumerate(detecciones):
      # eleccion de K vecinos más cercanos
           #print(str(index+1)+" "+classes[detecciones[index][1]]+" con "+str(round(detecciones[index][0]*100,2))+"%")
           print("\nPara imagen "+deteccion[0]+":")
+          #img = Image.open(path+deteccion[0])
+          #draw = ImageDraw.Draw(img)
+          #font = ImageFont.truetype('./Roboto-Bold.ttf', 16)
+
           if deteccion[1] != False:
                print('\n'.join('{}: {}'.format(*k) for k in enumerate(deteccion[1][:k])))
                rank = deteccion[1][:k]
@@ -186,10 +222,29 @@ def knn(pathsave):
                     knns.append(rank[i][0])
                
                value = max(knns,key=knns.count)
-               print("Con k="+str(k)+" tenemos que el recorte es: "+classes[int(value)])
+               print()
+               print("Con k="+str(k)+" tenemos que el recorte es: "+bcolors.OKGREEN +classes[int(value)]+ bcolors.ENDC)
                productos.append(int(value))
+
+               recorteratio=float(deteccion[0][deteccion[0].rfind("-")+1:deteccion[0].rfind(".")])
+               knnratio=float(deteccion[1][0][2])
+
+               if abs(recorteratio-knnratio) > 0.3:
+                    print(bcolors.FAIL + "\nAtención: Es posible que existan más productos en la detección" 
+      + bcolors.ENDC)
+                    #draw.text((0, 0),str(int(value))+": "+classes[int(value)]+", ATENCION",(255,255,255),font=font)
+               #else:
+                    #draw.text((0, 0),str(int(value))+": "+classes[int(value)],(255,255,255),font=font)
           else:
                print("No existen features para el color dominante en el recorte")
+               #draw.text((0, 0),"No features",(255,255,255),font=font)
+
+          #img.save(path+deteccion[0])
+
+
+
+
+
      return productos
 
 
@@ -206,7 +261,7 @@ def test(rcnn,path):
 
      fl =f.readlines()
      for x in fl:
-          filename= path+"/"+x[:x.find("-")]
+          filename= path+x[:x.find("-")]
           fileproducs=[]
 
           x = x[x.find("-"):]
@@ -225,40 +280,14 @@ def test(rcnn,path):
           print("\n============ Deteccion de imagen =================")
           path = deteccion(rcnn,testimages[i][0])
           detecciones = knn(path)
-          totalVisibles=len(testimages[i][1])
-          detectadas=len(detecciones)
-          errores=0
-          correctas=0
-          print("\n============ Test de imagen =================")
-          print(detecciones)
-          for ele in testimages[i][1]: 
-               if ele in detecciones:    
-                    detecciones.remove(ele)
-                    correctas=correctas+1
-               else:
-                    errores = errores+1     
-
-          print("De "+str(totalVisibles)+" se detectaron "+str(detectadas)+". Se cometieron "+str(errores)+" errores.")
-          print("Presicion:"+str(correctas/detectadas))
-          print("Recall:"+str(correctas/(correctas+errores)))
-
-          precision=precision+(correctas/detectadas)
-          recall=recall+(correctas/(correctas+errores))
-     precision=precision/len(testimages)
-     recall=recall/len(testimages)
-     fmeasure=(precision+recall)/2
-     print("============= Evaluacion del sistema =============")
-     print("Con "+str(len(testimages))+" imagenes obtenemos:")
-     print("Presición: "+str(precision))
-     print("Recall: "+str(recall))
-     print("F-Measure: "+str(fmeasure))
-
      return
 
 
 
 if __name__ == '__main__':
      # Parse command line arguments
+     start_time = time.time()
+
      parser = argparse.ArgumentParser()
      parser.add_argument("command",
                         metavar="<command>",
@@ -270,31 +299,44 @@ if __name__ == '__main__':
                     metavar="path or URL to image",
                     help='Image to apply the color splash effect on')
 
+     parser.add_argument('--color',
+                    metavar="path or URL to image",
+                    help='')
+
      args = parser.parse_args()
 
-     if args.command == "detector":
-          assert args.image
-          "Se requiere imagen de entrada"
-     elif args.command == "detector":
-          assert args.folder
-          "Se requiere imagen de entrada"
-
-     
      
      # define the model
      rcnn = MaskRCNN(mode='inference', model_dir='./', config=TestConfig())
      # load coco model weights
-     rcnn.load_weights('trainingW/mask_rcnn_object_0050.h5', by_name=True)
+     weightpath='trainingW/mask_rcnn_object_0060.h5'
      
-     start = time.time()
+     rcnn.load_weights(weightpath, by_name=True)
+     print("%s s. --- Pesos cargados" % (time.time() - start_time))
+
+     if args.color =="True":
+          filtrocolor=True
+     else:
+          filtrocolor=False
+
      if args.command == "detector":
-          image = args.image
-          recortespath = deteccion(rcnn,image)
-          knn(recortespath)
+          while True:
+               print('Ingrese nombre de imagen:')
+               image = input()
+               if os.path.isfile(image) == True:
+                    recortespath = deteccion(rcnn,image)
+                    prods= knn(recortespath)
+                    print("%s s. --- La imagen ingresada contiene:" % (time.time() - start_time))
+
+                    for p in prods:
+                         print(bcolors.BOLD + str(" "+classes[p])+ bcolors.ENDC)
+               else:
+                    print("No existe imagen con ese nombre")
+     
 
      elif args.command == "test":
           folder = args.folder
           test(rcnn,folder)
 
-     end = time.time()
-     print("Tiempo de ejecución: "+ str(round(end-start,2))+" seg.")
+     print("\n \n")
+     #print("Tiempo de ejecución: "+ str(round(end-start,2))+" seg.")
